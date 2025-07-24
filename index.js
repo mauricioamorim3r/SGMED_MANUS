@@ -1,1 +1,12 @@
-Inherited file content will not be shown
+// Sistema de Gestão Metrológico (SGM) - Frontend Entry Point
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

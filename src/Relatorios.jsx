@@ -31,13 +31,26 @@ import {
   Mail,
   Printer,
   FileSpreadsheet,
-  FilePdf,
   FileImage,
   Database,
   Activity,
   MapPin,
   Gauge
 } from 'lucide-react'
+import { 
+  generateEquipmentReport, 
+  generateChemicalAnalysisReport, 
+  generateWellTestReport 
+} from '@/lib/pdfUtils'
+import { 
+  DataExporter, 
+  exportEquipments, 
+  exportChemicalAnalyses, 
+  exportWellTests, 
+  exportStock, 
+  exportStockMovements, 
+  exportChangeControl 
+} from '@/lib/exportUtils'
 import {
   Dialog,
   DialogContent,
@@ -189,45 +202,76 @@ const Relatorios = () => {
       setError('')
       setSuccess('')
 
-      const payload = tipo === 'personalizado' ? {
-        tipo: 'personalizado',
-        filtros,
-        modulos: relatorioPersonalizado.modulos_incluidos,
-        campos: relatorioPersonalizado.campos_selecionados
-      } : {
-        tipo,
-        filtros
-      }
-
-      const response = await fetch(`${API_BASE_URL}/relatorios/gerar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      })
-
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.style.display = 'none'
-        a.href = url
-        a.download = `relatorio_${tipo}_${new Date().toISOString().split('T')[0]}.${filtros.formato.toLowerCase()}`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+      // Fetch data based on report type
+      let data = null
+      
+      if (tipo === 'operacional') {
+        // Fetch equipment and measurement points data
+        const equipmentResponse = await fetch(`${API_BASE_URL}/equipamentos`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const equipmentData = await equipmentResponse.json()
         
-        setSuccess('Relatório gerado e baixado com sucesso!')
-        setTimeout(() => setSuccess(''), 3000)
+        if (filtros.formato === 'PDF') {
+          await generateEquipmentReport(equipmentData.equipamentos || [])
+        } else if (filtros.formato === 'Excel') {
+          const exportData = exportEquipments(equipmentData.equipamentos || [])
+          DataExporter.exportToExcel(exportData, `relatorio_equipamentos_${new Date().toISOString().split('T')[0]}`)
+        } else if (filtros.formato === 'CSV') {
+          const exportData = exportEquipments(equipmentData.equipamentos || [])
+          DataExporter.exportToCSV(exportData, `relatorio_equipamentos_${new Date().toISOString().split('T')[0]}`)
+        }
+      } else if (tipo === 'qualidade') {
+        // Fetch chemical analysis data
+        const analysisResponse = await fetch(`${API_BASE_URL}/analises-quimicas`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const analysisData = await analysisResponse.json()
+        
+        if (filtros.formato === 'Excel') {
+          const exportData = exportChemicalAnalyses(analysisData.analises || [])
+          DataExporter.exportToExcel(exportData, `relatorio_analises_${new Date().toISOString().split('T')[0]}`)
+        } else if (filtros.formato === 'CSV') {
+          const exportData = exportChemicalAnalyses(analysisData.analises || [])
+          DataExporter.exportToCSV(exportData, `relatorio_analises_${new Date().toISOString().split('T')[0]}`)
+        }
+      } else if (tipo === 'gestao') {
+        // Fetch stock data
+        const stockResponse = await fetch(`${API_BASE_URL}/estoque`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const stockData = await stockResponse.json()
+        
+        if (filtros.formato === 'Excel') {
+          const exportData = exportStock(stockData.itens || [])
+          DataExporter.exportToExcel(exportData, `relatorio_estoque_${new Date().toISOString().split('T')[0]}`)
+        } else if (filtros.formato === 'CSV') {
+          const exportData = exportStock(stockData.itens || [])
+          DataExporter.exportToCSV(exportData, `relatorio_estoque_${new Date().toISOString().split('T')[0]}`)
+        }
       } else {
-        const data = await response.json()
-        setError(data.message || 'Erro ao gerar relatório')
+        // Custom report - for now, generate equipment report
+        const equipmentResponse = await fetch(`${API_BASE_URL}/equipamentos`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const equipmentData = await equipmentResponse.json()
+        
+        if (filtros.formato === 'PDF') {
+          await generateEquipmentReport(equipmentData.equipamentos || [])
+        } else if (filtros.formato === 'Excel') {
+          const exportData = exportEquipments(equipmentData.equipamentos || [])
+          DataExporter.exportToExcel(exportData, `relatorio_personalizado_${new Date().toISOString().split('T')[0]}`)
+        } else if (filtros.formato === 'CSV') {
+          const exportData = exportEquipments(equipmentData.equipamentos || [])
+          DataExporter.exportToCSV(exportData, `relatorio_personalizado_${new Date().toISOString().split('T')[0]}`)
+        }
       }
+        
+      setSuccess('Relatório gerado e baixado com sucesso!')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
-      setError('Erro de conexão ao gerar relatório')
+      console.error('Erro ao gerar relatório:', err)
+      setError('Erro ao gerar relatório: ' + err.message)
     } finally {
       setGerandoRelatorio(false)
     }
@@ -285,7 +329,7 @@ const Relatorios = () => {
 
   const getFormatoIcon = (formato) => {
     const icons = {
-      'PDF': FilePdf,
+      'PDF': FileText,
       'Excel': FileSpreadsheet,
       'CSV': FileText,
       'PNG': FileImage

@@ -35,6 +35,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import TemplateImport from '@/components/TemplateImport'
+import { EmptyPolos } from '@/components/EmptyState'
 
 const API_BASE_URL = 'http://localhost:3001/api'
 
@@ -243,14 +245,19 @@ const Polos = ({ globalSearch }) => {
           <p className="text-gray-600">Gerencie os polos do sistema</p>
         </div>
 
-        {hasPermission('polos', 'criar') && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Polo
-              </Button>
-            </DialogTrigger>
+        <div className="flex gap-2">
+          <TemplateImport 
+            moduleName="polos" 
+            onImportComplete={() => fetchPolos()}
+          />
+          {hasPermission('polos', 'criar') && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Polo
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>
@@ -354,7 +361,8 @@ const Polos = ({ globalSearch }) => {
               </form>
             </DialogContent>
           </Dialog>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Filtros */}
@@ -465,26 +473,12 @@ const Polos = ({ globalSearch }) => {
       </div>
 
       {filteredPolos.length === 0 && !loading && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">
-              Nenhum polo encontrado
-            </h3>
-            <p className="text-gray-500 mb-4">
-              {searchTerm || statusFilter !== 'all' 
-                ? 'Tente ajustar os filtros de busca'
-                : 'Comece criando seu primeiro polo'
-              }
-            </p>
-            {hasPermission('polos', 'criar') && !searchTerm && statusFilter === 'all' && (
-              <Button onClick={() => setIsDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Primeiro Polo
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <EmptyPolos
+          searchTerm={(searchTerm || statusFilter !== 'all') ? searchTerm || 'filtros aplicados' : ''}
+          onAction={hasPermission('polos', 'criar') ? () => setIsDialogOpen(true) : null}
+          onImport={() => {}} // TemplateImport já está no header
+          showImportButton={false} // Não mostrar botão duplicado
+        />
       )}
     </div>
   )

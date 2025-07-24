@@ -26,7 +26,7 @@ import {
   Clock,
   BarChart3,
   Sliders,
-  Toggle
+  ToggleLeft
 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'

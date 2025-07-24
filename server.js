@@ -11,14 +11,18 @@ const path = require('path');
 // Importações locais
 const { initializeDatabase } = require('./database/init');
 const equipamentosRoutes = require('./routes/equipamentos');
-const placasOrificioRoutes = require('./routes/placasOrificio');
-const incertezasRoutes = require('./routes/incertezas');
 const polosRoutes = require('./routes/polos');
 const instalacoesRoutes = require('./routes/instalacoes');
+const pontosMedicaoRoutes = require('./routes/pontosMedicao');
+
+// Routes adicionais implementadas
+const placasOrificioRoutes = require('./routes/placasOrificio');
+const incertezasRoutes = require('./routes/incertezas');
 const trechosRetosRoutes = require('./routes/trechosRetos');
 const testesPocoRoutes = require('./routes/testesPocos');
 const analisesQuimicasRoutes = require('./routes/analisesQuimicas');
-const configuracoesRoutes = require('./routes/configuracoes_simples');
+const usuariosRoutes = require('./routes/usuarios');
+// const configuracoesRoutes = require('./routes/configuracoes_simples');
 
 /**
  * Cria e configura o servidor Express
@@ -113,6 +117,9 @@ async function createServer() {
   // Rotas de instalações
   app.use('/api/instalacoes', instalacoesRoutes);
   
+  // Rotas de pontos de medição
+  app.use('/api/pontos-medicao', pontosMedicaoRoutes);
+  
   // Rotas de trechos retos
   app.use('/api/trechos-retos', trechosRetosRoutes);
   
@@ -131,8 +138,11 @@ async function createServer() {
   // Rotas de análises químicas
   app.use('/api/analises-quimicas', analisesQuimicasRoutes);
   
-  // Rotas de configurações
-  app.use('/api/configuracoes', configuracoesRoutes);
+  // Rotas de usuários
+  app.use('/api/usuarios', usuariosRoutes);
+  
+  // Rotas de configurações (ainda não implementadas)
+  // app.use('/api/configuracoes', configuracoesRoutes);
   
   // Rota para servir arquivos estáticos (certificados, relatórios, etc.)
   app.use('/api/files', express.static(path.join(__dirname, '../../uploads')));

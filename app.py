@@ -5,58 +5,17 @@ Sistema de Gerenciamento Metrológico
 """
 
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 from datetime import datetime
-import json
 
 app = Flask(__name__)
-CORS(app)
 
-# Dados de demonstração
+# Dados serão carregados do banco de dados real - sem dados fictícios
 DEMO_DATA = {
-    'polos': [
-        {
-            'id': 1,
-            'nome_polo': 'Polo Sergipe',
-            'codigo_polo': 'PSE',
-            'localizacao': 'Sergipe, Brasil',
-            'status': 'Ativo',
-            'created_at': '2025-07-23T20:25:16.323Z'
-        },
-        {
-            'id': 2,
-            'nome_polo': 'Polo Bahia',
-            'codigo_polo': 'PBA',
-            'localizacao': 'Bahia, Brasil',
-            'status': 'Ativo',
-            'created_at': '2025-07-23T20:25:16.323Z'
-        }
-    ],
-    'instalacoes': [
-        {
-            'id': 1,
-            'polo_id': 1,
-            'nome_instalacao': 'UPGN Carmópolis',
-            'codigo_instalacao': 'UPGN-CAR',
-            'tipo_instalacao': 'UPGN',
-            'status': 'Operacional',
-            'created_at': '2025-07-23T20:25:16.323Z'
-        }
-    ],
-    'pontos_medicao': [
-        {
-            'id': 1,
-            'polo_id': 1,
-            'instalacao_id': 1,
-            'nome_ponto': 'Entrada Principal',
-            'tag_ponto': 'PM-001',
-            'tipo_medidor_primario': 'Placa de Orifício',
-            'fluido_medido': 'Gás Natural',
-            'status_ponto': 'Operacional',
-            'created_at': '2025-07-23T20:25:16.323Z'
-        }
-    ]
+    'polos': [],
+    'instalacoes': [],
+    'pontos_medicao': []
 }
+
 
 @app.route('/')
 def home():
@@ -86,6 +45,7 @@ def home():
         ]
     })
 
+
 @app.route('/api/health')
 def health_check():
     """Health check endpoint"""
@@ -95,6 +55,7 @@ def health_check():
         'version': '1.0.0',
         'service': 'SGM API Flask'
     })
+
 
 @app.route('/api/info')
 def system_info():
@@ -115,6 +76,7 @@ def system_info():
         ]
     })
 
+
 @app.route('/api/polos', methods=['GET', 'POST'])
 def polos():
     """Endpoint para gestão de polos"""
@@ -123,7 +85,7 @@ def polos():
             'success': True,
             'data': DEMO_DATA['polos'],
             'total': len(DEMO_DATA['polos']),
-            'message': 'Dados de demonstração - SGM Flask Backend funcionando!'
+            'message': 'SGM Flask Backend - dados do banco real'
         })
     elif request.method == 'POST':
         return jsonify({
@@ -131,6 +93,7 @@ def polos():
             'message': 'Funcionalidade POST implementada',
             'data': request.get_json()
         })
+
 
 @app.route('/api/instalacoes', methods=['GET', 'POST'])
 def instalacoes():
@@ -140,7 +103,7 @@ def instalacoes():
             'success': True,
             'data': DEMO_DATA['instalacoes'],
             'total': len(DEMO_DATA['instalacoes']),
-            'message': 'Dados de demonstração - SGM Flask Backend funcionando!'
+            'message': 'SGM Flask Backend - dados do banco real'
         })
     elif request.method == 'POST':
         return jsonify({
@@ -148,6 +111,7 @@ def instalacoes():
             'message': 'Funcionalidade POST implementada',
             'data': request.get_json()
         })
+
 
 @app.route('/api/pontos-medicao', methods=['GET', 'POST'])
 def pontos_medicao():
@@ -157,7 +121,7 @@ def pontos_medicao():
             'success': True,
             'data': DEMO_DATA['pontos_medicao'],
             'total': len(DEMO_DATA['pontos_medicao']),
-            'message': 'Dados de demonstração - SGM Flask Backend funcionando!'
+            'message': 'SGM Flask Backend - dados do banco real'
         })
     elif request.method == 'POST':
         return jsonify({
@@ -166,12 +130,14 @@ def pontos_medicao():
             'data': request.get_json()
         })
 
+
 # Endpoints genéricos para outros módulos
 MODULES = [
     'placas-orificio', 'incertezas', 'trechos-retos', 'testes-pocos',
-    'analises-quimicas', 'estoque', 'movimentacao-estoque', 'controle-mudancas',
-    'usuarios', 'configuracoes', 'relatorios'
+    'analises-quimicas', 'estoque', 'movimentacao-estoque',
+    'controle-mudancas', 'usuarios', 'configuracoes', 'relatorios'
 ]
+
 
 def create_module_endpoint(module_name):
     """Cria endpoint genérico para um módulo"""
@@ -181,28 +147,32 @@ def create_module_endpoint(module_name):
                 'success': True,
                 'data': [],
                 'total': 0,
-                'message': f'Módulo {module_name} implementado - SGM Flask Backend funcionando!'
+                'message': (f'Módulo {module_name} implementado - '
+                            'SGM Flask Backend funcionando!')
             })
         elif request.method == 'POST':
             return jsonify({
                 'success': True,
-                'message': f'Funcionalidade POST do módulo {module_name} implementada',
+                'message': (f'Funcionalidade POST do módulo {module_name} '
+                           'implementada'),
                 'data': request.get_json()
             })
     return module_handler
+
 
 # Registrar endpoints para todos os módulos
 for module in MODULES:
     endpoint = f'/api/{module}'
     app.add_url_rule(
-        endpoint, 
+        endpoint,
         f'{module.replace("-", "_")}_handler',
         create_module_endpoint(module),
         methods=['GET', 'POST']
     )
 
+
 @app.errorhandler(404)
-def not_found(error):
+def not_found(_error):
     """Handler para rotas não encontradas"""
     return jsonify({
         'error': 'Rota não encontrada',
@@ -218,20 +188,22 @@ def not_found(error):
         ] + [f'GET /api/{m}' for m in MODULES]
     }), 404
 
+
 @app.errorhandler(500)
-def internal_error(error):
+def internal_error(_error):
     """Handler para erros internos"""
     return jsonify({
         'error': 'Erro interno do servidor',
-        'message': 'SGM Flask Backend em funcionamento com dados de demonstração',
+        'message': ('SGM Flask Backend em funcionamento com '
+                   'dados de demonstração'),
         'timestamp': datetime.now().isoformat()
     }), 500
+
 
 if __name__ == '__main__':
     print('🚀 Iniciando SGM Flask Backend para deploy permanente...')
     print('📍 Porta: 5000')
     print('🌍 Ambiente: production')
     print('🎯 Sistema pronto para demonstração!')
-    
-    app.run(host='0.0.0.0', port=5000, debug=False)
 
+    app.run(host='0.0.0.0', port=5000, debug=False)

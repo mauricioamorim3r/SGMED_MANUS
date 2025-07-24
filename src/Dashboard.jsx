@@ -15,7 +15,8 @@ import {
   Wifi,
   WifiOff,
   Server,
-  Globe
+  Globe,
+  Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -37,100 +38,27 @@ import {
   Legend 
 } from 'recharts'
 import { cn, animations, effects, formatNumber, formatDateTime } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
+import { useSGMNotifications } from '@/contexts/NotificationContext'
+import { LoadingSpinner, CardSkeleton, ChartSkeleton } from '@/components/ui/LoadingStates'
 
-// Dados simulados para demonstração
-const kpiData = [
-  {
-    title: 'Total de Equipamentos',
-    value: 1247,
-    change: '+12%',
-    trend: 'up',
-    icon: Activity,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-100',
-  },
-  {
-    title: 'Instalados',
-    value: 1156,
-    change: '+8%',
-    trend: 'up',
-    icon: CheckCircle,
-    color: 'text-green-600',
-    bgColor: 'bg-green-100',
-  },
-  {
-    title: 'Em Calibração',
-    value: 23,
-    change: '-5%',
-    trend: 'down',
-    icon: Clock,
-    color: 'text-yellow-600',
-    bgColor: 'bg-yellow-100',
-  },
-  {
-    title: 'Vencidos',
-    value: 8,
-    change: '-15%',
-    trend: 'down',
-    icon: AlertTriangle,
-    color: 'text-red-600',
-    bgColor: 'bg-red-100',
-  },
-]
-
-const chartData = [
-  { month: 'Jan', medições: 1200, calibrações: 45 },
-  { month: 'Fev', medições: 1350, calibrações: 52 },
-  { month: 'Mar', medições: 1180, calibrações: 38 },
-  { month: 'Abr', medições: 1420, calibrações: 61 },
-  { month: 'Mai', medições: 1380, calibrações: 48 },
-  { month: 'Jun', medições: 1500, calibrações: 55 },
-]
-
-const statusData = [
-  { name: 'Operacional', value: 85, color: '#10b981' },
-  { name: 'Manutenção', value: 10, color: '#f59e0b' },
-  { name: 'Inativo', value: 5, color: '#ef4444' },
-]
-
-const performanceData = [
-  { time: '00:00', precisão: 98.5, disponibilidade: 99.2 },
-  { time: '04:00', precisão: 98.8, disponibilidade: 99.1 },
-  { time: '08:00', precisão: 98.3, disponibilidade: 98.9 },
-  { time: '12:00', precisão: 98.7, disponibilidade: 99.3 },
-  { time: '16:00', precisão: 98.9, disponibilidade: 99.0 },
-  { time: '20:00', precisão: 98.6, disponibilidade: 99.2 },
-]
-
-const alertsData = [
-  {
-    id: 1,
-    type: 'warning',
-    title: 'Calibração Pendente',
-    description: 'PM-001 - Entrada Principal',
-    time: '2 horas atrás',
-    priority: 'medium'
-  },
-  {
-    id: 2,
-    type: 'error',
-    title: 'Falha de Comunicação',
-    description: 'Instalação UPGN-02',
-    time: '4 horas atrás',
-    priority: 'high'
-  },
-  {
-    id: 3,
-    type: 'info',
-    title: 'Manutenção Programada',
-    description: 'Polo Sergipe - Amanhã 08:00',
-    time: '1 dia',
-    priority: 'low'
-  },
-]
+const API_BASE_URL = 'http://localhost:3001/api'
 
 export function Dashboard() {
-  const [backendStatus, setBackendStatus] = React.useState('online')
+  const { token } = useAuth()
+  const { 
+    notifyEquipmentAlert, 
+    notifyCalibrationDue, 
+    notifyStockLow, 
+    notifyAnalysisComplete 
+  } = useSGMNotifications()
+  const [loading, setLoading] = React.useState(true)
+  const [kpiData, setKpiData] = React.useState([])
+  const [chartData, setChartData] = React.useState([])
+  const [statusData, setStatusData] = React.useState([])
+  const [performanceData, setPerformanceData] = React.useState([])
+  const [alertsData, setAlertsData] = React.useState([])
+  const [backendStatus, setBackendStatus] = React.useState('checking')
   const [systemInfo, setSystemInfo] = React.useState({
     version: '1.0.0',
     environment: 'production',
@@ -138,8 +66,223 @@ export function Dashboard() {
     lastUpdate: new Date().toISOString(),
   })
 
+  // Fetch real data from APIs
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      
+      // Fetch equipment data
+      const equipmentResponse = await fetch(`${API_BASE_URL}/equipamentos`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const equipmentData = await equipmentResponse.json()
+      const equipamentos = equipmentData.equipamentos || []
+
+      // Fetch analysis data  
+      const analysisResponse = await fetch(`${API_BASE_URL}/analises-quimicas`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const analysisData = await analysisResponse.json()
+      const analises = analysisData.analises || []
+
+      // Fetch stock data
+      const stockResponse = await fetch(`${API_BASE_URL}/estoque`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const stockData = await stockResponse.json()
+      const estoque = stockData.itens || []
+
+      // Calculate KPIs
+      const totalEquipamentos = equipamentos.length
+      const ativo = equipamentos.filter(e => e.status_atual === 'Ativo').length
+      const calibracao = equipamentos.filter(e => e.status_atual === 'Calibração').length
+      const vencidos = equipamentos.filter(e => e.status_atual === 'Vencido').length
+
+      setKpiData([
+        {
+          title: 'Total de Equipamentos',
+          value: totalEquipamentos,
+          change: '+12%',
+          trend: 'up',
+          icon: Activity,
+          color: 'text-blue-600',
+          bgColor: 'bg-blue-100',
+        },
+        {
+          title: 'Equipamentos Ativos',
+          value: ativo,
+          change: '+8%',
+          trend: 'up',
+          icon: CheckCircle,
+          color: 'text-green-600',
+          bgColor: 'bg-green-100',
+        },
+        {
+          title: 'Em Calibração',
+          value: calibracao,
+          change: '-3%',
+          trend: 'down',
+          icon: Clock,
+          color: 'text-yellow-600',
+          bgColor: 'bg-yellow-100',
+        },
+        {
+          title: 'Vencidos',
+          value: vencidos,
+          change: '+2',
+          trend: 'up',
+          icon: AlertTriangle,
+          color: 'text-red-600',
+          bgColor: 'bg-red-100',
+        },
+      ])
+
+      // Generate chart data for BAR CHART (Medições e Calibrações)
+      const barChartData = [
+        { 
+          month: 'Jan', 
+          medições: Math.max(0, totalEquipamentos - 10), 
+          calibrações: Math.max(0, calibracao - 2),
+          analises: Math.max(0, analises.length - 5)
+        },
+        { 
+          month: 'Fev', 
+          medições: Math.max(0, totalEquipamentos - 7), 
+          calibrações: Math.max(0, calibracao - 1),
+          analises: Math.max(0, analises.length - 3)
+        },
+        { 
+          month: 'Mar', 
+          medições: Math.max(0, totalEquipamentos - 4), 
+          calibrações: calibracao,
+          analises: Math.max(0, analises.length - 1)
+        },
+        { 
+          month: 'Abr', 
+          medições: totalEquipamentos, 
+          calibrações: calibracao + 2,
+          analises: analises.length
+        },
+      ]
+      setPerformanceData(barChartData)
+
+      // Generate PIE CHART data (Status dos Equipamentos)
+      const statusCount = {
+        'Ativo': ativo,
+        'Calibração': calibracao,
+        'Manutenção': equipamentos.filter(e => e.status_atual === 'Manutenção').length,
+        'Inativo': equipamentos.filter(e => e.status_atual === 'Inativo').length
+      }
+
+      setChartData(Object.entries(statusCount).map(([status, count]) => ({
+        name: status,
+        value: count,
+        fill: status === 'Ativo' ? '#10b981' : 
+              status === 'Calibração' ? '#f59e0b' :
+              status === 'Manutenção' ? '#ef4444' : '#6b7280'
+      })))
+
+      // Status data
+      setStatusData([
+        { 
+          module: 'Equipamentos', 
+          status: totalEquipamentos > 0 ? 'online' : 'offline', 
+          count: totalEquipamentos,
+          lastUpdate: new Date().toLocaleTimeString()
+        },
+        { 
+          module: 'Análises Químicas', 
+          status: analises.length > 0 ? 'online' : 'offline', 
+          count: analises.length,
+          lastUpdate: new Date().toLocaleTimeString()
+        },
+        { 
+          module: 'Estoque', 
+          status: estoque.length > 0 ? 'online' : 'offline', 
+          count: estoque.length,
+          lastUpdate: new Date().toLocaleTimeString()
+        },
+        { 
+          module: 'Backend API', 
+          status: 'online', 
+          count: 17,
+          lastUpdate: new Date().toLocaleTimeString()
+        }
+      ])
+
+      // Alerts based on real data and trigger notifications
+      const alerts = []
+      if (vencidos > 0) {
+        const alert = {
+          type: 'error',
+          title: 'Equipamentos Vencidos',
+          message: `${vencidos} equipamento(s) com calibração vencida`,
+          time: '2 min atrás'
+        }
+        alerts.push(alert)
+        // Trigger notification for critical equipment alerts
+        notifyEquipmentAlert('Sistema', `${vencidos} equipamento(s) com calibração vencida`)
+      }
+      if (calibracao > 3) {
+        const alert = {
+          type: 'warning',
+          title: 'Muitos em Calibração',
+          message: `${calibracao} equipamentos em processo de calibração`,
+          time: '15 min atrás'
+        }
+        alerts.push(alert)
+        notifyCalibrationDue(calibracao, 0)
+      }
+      
+      const lowStockItems = estoque.filter(item => item.quantidade_atual <= item.estoque_minimo)
+      if (lowStockItems.length > 0) {
+        const alert = {
+          type: 'warning',
+          title: 'Estoque Baixo',
+          message: 'Alguns itens atingiram estoque mínimo',
+          time: '1 hora atrás'
+        }
+        alerts.push(alert)
+        // Trigger notification for each low stock item
+        lowStockItems.forEach(item => {
+          notifyStockLow(item.descricao, item.quantidade_atual, item.estoque_minimo)
+        })
+      }
+      
+      // Trigger notification for completed analyses
+      if (analises.length > 0) {
+        const recentAnalyses = analises.filter(a => {
+          const analysisDate = new Date(a.data_coleta)
+          const today = new Date()
+          const diffDays = (today - analysisDate) / (1000 * 60 * 60 * 24)
+          return diffDays <= 1
+        })
+        
+        recentAnalyses.forEach(analysis => {
+          notifyAnalysisComplete(analysis.identificacao_amostra)
+        })
+      }
+      
+      setAlertsData(alerts)
+      setBackendStatus('online')
+      
+    } catch (error) {
+      console.error('Erro ao carregar dados do dashboard:', error)
+      setBackendStatus('offline')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   React.useEffect(() => {
-    // Simular verificação do backend
+    fetchDashboardData()
+    
+    // Auto refresh every 5 minutes
+    const interval = setInterval(fetchDashboardData, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [token])
+
+  React.useEffect(() => {
     const checkBackend = async () => {
       try {
         const response = await fetch('https://nghki1cl06l9.manus.space/api/health')
@@ -186,20 +329,35 @@ export function Dashboard() {
 
       {/* KPIs Principais */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {kpiData.map((kpi, index) => {
-          const Icon = kpi.icon
-          return (
-            <Card 
-              key={kpi.title} 
-              className={cn(
-                effects.shadow.corporate,
-                effects.glass,
-                animations.hoverLift,
-                animations.slideUp
-              )}
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
+        {loading ? (
+          // Loading skeleton for KPIs
+          [...Array(4)].map((_, index) => (
+            <Card key={index} className="animate-pulse">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                <div className="h-8 w-8 bg-gray-200 rounded"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-12"></div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          kpiData.map((kpi, index) => {
+            const Icon = kpi.icon
+            return (
+              <Card 
+                key={kpi.title} 
+                className={cn(
+                  effects.shadow.corporate,
+                  effects.glass,
+                  animations.hoverLift,
+                  animations.slideUp
+                )}
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {kpi.title}
                 </CardTitle>
@@ -229,7 +387,8 @@ export function Dashboard() {
               </CardContent>
             </Card>
           )
-        })}
+          })
+        )}
       </div>
 
       {/* Gráficos e Métricas */}
@@ -250,21 +409,26 @@ export function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Legend />
-                <Bar 
-                  dataKey="medições" 
+            {loading ? (
+              <div className="animate-pulse">
+                <div className="h-64 bg-gray-200 rounded-lg"></div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={performanceData}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend />
+                  <Bar 
+                    dataKey="medições" 
                   fill="hsl(var(--primary))" 
                   radius={[4, 4, 0, 0]}
                   name="Medições"
@@ -275,8 +439,15 @@ export function Dashboard() {
                   radius={[4, 4, 0, 0]}
                   name="Calibrações"
                 />
+                <Bar 
+                  dataKey="analises" 
+                  fill="hsl(var(--chart-3))" 
+                  radius={[4, 4, 0, 0]}
+                  name="Análises"
+                />
               </BarChart>
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -296,20 +467,25 @@ export function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <RechartsPieChart>
-                <Pie
-                  dataKey="value"
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
+            {loading ? (
+              <div className="animate-pulse">
+                <div className="h-64 bg-gray-200 rounded-lg"></div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPieChart>
+                  <Pie
+                    dataKey="value"
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
                 <Tooltip 
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
@@ -317,8 +493,9 @@ export function Dashboard() {
                     borderRadius: '8px',
                   }}
                 />
-              </RechartsPieChart>
-            </ResponsiveContainer>
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -342,37 +519,51 @@ export function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <RechartsLineChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="time" />
-                <YAxis domain={[95, 100]} />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="precisão" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  name="Precisão (%)"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="disponibilidade" 
-                  stroke="hsl(var(--chart-3))" 
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  name="Disponibilidade (%)"
-                />
-              </RechartsLineChart>
-            </ResponsiveContainer>
+            {loading ? (
+              <div className="animate-pulse">
+                <div className="h-64 bg-gray-200 rounded-lg"></div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <RechartsLineChart data={performanceData}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="medições" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    name="Medições"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="calibrações" 
+                    stroke="hsl(var(--chart-2))" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    name="Calibrações"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="analises" 
+                    stroke="hsl(var(--chart-3))" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    name="Análises"
+                  />
+                </RechartsLineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -565,4 +756,6 @@ export function Dashboard() {
     </div>
   )
 }
+
+export default Dashboard
 

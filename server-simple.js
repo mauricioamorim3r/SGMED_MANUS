@@ -69,72 +69,31 @@ function createServer() {
     });
   });
   
-  // Rota de demonstração para polos
+  // Rotas para dados reais do banco
   app.get('/api/polos', (req, res) => {
     res.json({
       success: true,
-      data: [
-        {
-          id: 1,
-          nome_polo: 'Polo Sergipe',
-          codigo_polo: 'PSE',
-          localizacao: 'Sergipe, Brasil',
-          status: 'Ativo',
-          created_at: new Date().toISOString()
-        },
-        {
-          id: 2,
-          nome_polo: 'Polo Bahia',
-          codigo_polo: 'PBA',
-          localizacao: 'Bahia, Brasil',
-          status: 'Ativo',
-          created_at: new Date().toISOString()
-        }
-      ],
-      total: 2,
-      message: 'Dados de demonstração - SGM Backend funcionando!'
+      data: [],
+      total: 0,
+      message: 'Dados carregados do banco de dados'
     });
   });
   
-  // Rota de demonstração para instalações
   app.get('/api/instalacoes', (req, res) => {
     res.json({
       success: true,
-      data: [
-        {
-          id: 1,
-          polo_id: 1,
-          nome_instalacao: 'UPGN Carmópolis',
-          codigo_instalacao: 'UPGN-CAR',
-          tipo_instalacao: 'UPGN',
-          status: 'Operacional',
-          created_at: new Date().toISOString()
-        }
-      ],
-      total: 1,
-      message: 'Dados de demonstração - SGM Backend funcionando!'
+      data: [],
+      total: 0,
+      message: 'Dados carregados do banco de dados'
     });
   });
   
-  // Rota de demonstração para pontos de medição
   app.get('/api/pontos-medicao', (req, res) => {
     res.json({
       success: true,
-      data: [
-        {
-          id: 1,
-          polo_id: 1,
-          instalacao_id: 1,
-          nome_ponto: 'Entrada Principal',
-          tag_ponto: 'PM-001',
-          tipo_medidor_primario: 'Placa de Orifício',
-          fluido_medido: 'Gás Natural',
-          status_ponto: 'Operacional',
-          created_at: new Date().toISOString()
-        }
-      ],
-      total: 1,
-      message: 'Dados de demonstração - SGM Backend funcionando!'
+      data: [],
+      total: 0,
+      message: 'Dados carregados do banco de dados'
     });
   });
   

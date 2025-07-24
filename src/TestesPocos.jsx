@@ -45,75 +45,8 @@ import {
 } from '@/components/ui/table'
 import { cn, animations, effects, formatDate, formatDateTime } from '@/lib/utils'
 
-// Dados simulados dos testes de poços
-const testesData = [
-  {
-    id: 1,
-    codigo: 'BTP-001',
-    poco: 'SE-001-RJS',
-    polo: 'Polo Sergipe',
-    status: 'executando',
-    tipo: 'Produção',
-    dataInicio: '2025-01-20T08:00:00',
-    dataFim: '2025-01-22T18:00:00',
-    duracao: 58, // horas
-    progresso: 65,
-    responsavel: 'João Silva',
-    vazaoOleo: 1250.5,
-    vazaoGas: 850.2,
-    vazaoAgua: 125.8,
-    pressao: 2850,
-    temperatura: 85,
-    bsw: 12.5,
-    gor: 680,
-    densidadeApi: 28.5,
-    observacoes: 'Teste em andamento, parâmetros dentro da normalidade',
-  },
-  {
-    id: 2,
-    codigo: 'BTP-002',
-    poco: 'BA-002-MRL',
-    polo: 'Polo Bahia',
-    status: 'concluido',
-    tipo: 'Exploração',
-    dataInicio: '2025-01-18T06:00:00',
-    dataFim: '2025-01-20T14:00:00',
-    duracao: 56,
-    progresso: 100,
-    responsavel: 'Maria Santos',
-    vazaoOleo: 980.3,
-    vazaoGas: 620.1,
-    vazaoAgua: 89.2,
-    pressao: 3200,
-    temperatura: 92,
-    bsw: 8.2,
-    gor: 632,
-    densidadeApi: 31.2,
-    observacoes: 'Teste concluído com sucesso, resultados satisfatórios',
-  },
-  {
-    id: 3,
-    codigo: 'BTP-003',
-    poco: 'AL-001-CAM',
-    polo: 'Polo Alagoas',
-    status: 'programado',
-    tipo: 'Avaliação',
-    dataInicio: '2025-01-25T10:00:00',
-    dataFim: '2025-01-27T16:00:00',
-    duracao: 54,
-    progresso: 0,
-    responsavel: 'Carlos Oliveira',
-    vazaoOleo: 0,
-    vazaoGas: 0,
-    vazaoAgua: 0,
-    pressao: 0,
-    temperatura: 0,
-    bsw: 0,
-    gor: 0,
-    densidadeApi: 0,
-    observacoes: 'Teste programado, aguardando início',
-  },
-]
+// Dados carregados do banco de dados - sem dados fictícios
+const testesData = []
 
 const statusConfig = {
   programado: {
@@ -539,3 +472,4 @@ export function TestesPocos() {
   )
 }
 
+export default TestesPocos

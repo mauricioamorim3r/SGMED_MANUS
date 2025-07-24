@@ -9,7 +9,7 @@ import {
   Search, 
   Edit, 
   Trash2, 
-  Flask, 
+  FlaskConical, 
   Activity, 
   Settings,
   AlertTriangle,
